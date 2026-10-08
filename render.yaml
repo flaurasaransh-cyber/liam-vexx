@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: vexx-bot
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npx turbo run build --filter=@vexx/bot
+    startCommand: node apps/bot/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_ORIGIN
+        sync: false
+      - key: NODE_VERSION
+        value: 22
+  - type: web
+    name: vexx-admin
+    runtime: static
+    buildCommand: npm ci --include=dev && npx turbo run build --filter=@vexx/admin
+    staticPublishPath: apps/admin/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
