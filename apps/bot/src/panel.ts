@@ -90,16 +90,27 @@ export async function welcomeMessage(
   let onBanner = false
   if (banner) {
     let data = banner.data
-    if (welcome.showAvatar && spot !== 'none') {
-      try {
-        const avatar = Buffer.from(await (await fetch(member.avatarUrl)).arrayBuffer())
-        data = await bannerWithAvatar(banner.data, avatar, spot, welcome.color)
-        onBanner = true
-      } catch (err) {
-        console.error('Could not put the profile picture on the banner:', err instanceof Error ? err.message : err)
+    let composed = false
+    if (spot !== 'none') {
+      // the member's picture goes in the banner's circle; when it is switched off or cannot be fetched, the VEXX
+      // logo takes the circle instead, so it is never an empty gap
+      if (welcome.showAvatar) {
+        try {
+          const res = await fetch(member.avatarUrl)
+          if (!res.ok) throw new Error(`avatar answered ${res.status}`)
+          data = await bannerWithAvatar(banner.data, Buffer.from(await res.arrayBuffer()), spot, welcome.color)
+          onBanner = true
+          composed = true
+        } catch (err) {
+          console.error('Could not put the profile picture on the banner:', err instanceof Error ? err.message : err)
+        }
+      }
+      if (!composed) {
+        data = await bannerWithAvatar(banner.data, logo, spot, welcome.color).catch(() => banner.data)
+        composed = true
       }
     }
-    const fileName = onBanner ? 'welcome.png' : banner.name
+    const fileName = composed ? 'welcome.png' : banner.name
     embed.setImage(`attachment://${fileName}`)
     files.push(new AttachmentBuilder(data, { name: fileName }))
   }

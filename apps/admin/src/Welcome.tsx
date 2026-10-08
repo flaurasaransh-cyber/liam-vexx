@@ -168,7 +168,11 @@ export function WelcomeSection({
                   <div className="banner" key={name}>
                     <div className="banner-shot">
                       {urlOf(name) ? <img src={urlOf(name)!} alt={`Banner ${i + 1}`} /> : <div className="banner-missing">Saving…</div>}
-                      {welcome.showAvatar && spotFor(welcome, name) !== 'none' ? <span className={`face spot-${spotFor(welcome, name)}`} aria-hidden>N</span> : null}
+                      {spotFor(welcome, name) !== 'none' ? (
+                        <span className={`face spot-${spotFor(welcome, name)}${welcome.showAvatar ? '' : ' logo'}`} aria-hidden>
+                          {welcome.showAvatar ? 'N' : <img src="/logo.png" alt="" />}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="spot" role="group" aria-label={`Profile picture on banner ${i + 1}`}>
                       {AVATAR_SPOTS.map((sp) => (
@@ -258,7 +262,11 @@ export function WelcomeSection({
                     {banner && urlOf(banner) ? (
                       <div className="embed-img banner-shot">
                         <img src={urlOf(banner)!} alt="Banner" />
-                        {welcome.showAvatar && spotFor(welcome, banner) !== 'none' ? <span className={`face spot-${spotFor(welcome, banner)}`} aria-hidden>N</span> : null}
+                        {spotFor(welcome, banner) !== 'none' ? (
+                        <span className={`face spot-${spotFor(welcome, banner)}${welcome.showAvatar ? '' : ' logo'}`} aria-hidden>
+                          {welcome.showAvatar ? 'N' : <img src="/logo.png" alt="" />}
+                        </span>
+                      ) : null}
                       </div>
                     ) : null}
                     {tagline ? <div className="embed-footer">{tagline}</div> : null}
