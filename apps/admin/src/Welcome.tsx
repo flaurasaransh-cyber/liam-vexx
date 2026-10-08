@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Loader2, Plus, Send, Trash2 } from 'lucide-react'
-import { PLACEHOLDERS, fillPlaceholders, type ChannelOption, type PanelState, type Welcome } from '@vexx/shared'
+import { AVATAR_SPOTS, PLACEHOLDERS, fillPlaceholders, spotFor, type AvatarSpot, type ChannelOption, type PanelState, type Welcome } from '@vexx/shared'
 import { ChannelPicker } from './ChannelPicker'
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -62,6 +62,8 @@ export function WelcomeSection({
   const [step, setStep] = useState(0)
   const urlOf = (name: string) => state.banners.find((b) => b.name === name)?.url ?? null
 
+  const setSpot = (name: string, spot: AvatarSpot) => setWelcome({ avatarSpots: { ...welcome.avatarSpots, [name]: spot } })
+  const spotLabel: Record<AvatarSpot, string> = { left: 'Left', center: 'Centre', right: 'Right', none: 'None' }
   const setText = (i: number, value: string) => setWelcome({ messages: welcome.messages.map((m, j) => (j === i ? value : m)) })
   const moveBanner = (i: number, by: number) => {
     const next = [...welcome.banners]
@@ -108,7 +110,7 @@ export function WelcomeSection({
               </Field>
             </div>
             <Switch checked={welcome.showAvatar} onChange={(showAvatar) => setWelcome({ showAvatar })}>
-              Show the new member&apos;s profile picture
+              Show the new member&apos;s profile picture (on the banner, where each banner says)
             </Switch>
             <Switch checked={welcome.mention} onChange={(mention) => setWelcome({ mention })}>
               Ping the new member
@@ -164,7 +166,17 @@ export function WelcomeSection({
               <div className="banners">
                 {welcome.banners.map((name, i) => (
                   <div className="banner" key={name}>
-                    {urlOf(name) ? <img src={urlOf(name)!} alt={`Banner ${i + 1}`} /> : <div className="banner-missing">Saving…</div>}
+                    <div className="banner-shot">
+                      {urlOf(name) ? <img src={urlOf(name)!} alt={`Banner ${i + 1}`} /> : <div className="banner-missing">Saving…</div>}
+                      {welcome.showAvatar && spotFor(welcome, name) !== 'none' ? <span className={`face spot-${spotFor(welcome, name)}`} aria-hidden>N</span> : null}
+                    </div>
+                    <div className="spot" role="group" aria-label={`Profile picture on banner ${i + 1}`}>
+                      {AVATAR_SPOTS.map((sp) => (
+                        <button key={sp} type="button" aria-pressed={spotFor(welcome, name) === sp} onClick={() => setSpot(name, sp)}>
+                          {spotLabel[sp]}
+                        </button>
+                      ))}
+                    </div>
                     <div className="banner-bar">
                       <span>{i + 1}</span>
                       <div className="tools">
@@ -242,8 +254,13 @@ export function WelcomeSection({
                       {welcome.title ? <div className="embed-title">{fillPlaceholders(welcome.title, { ...values, user: SAMPLE.username })}</div> : null}
                       <div className="embed-body">{renderBold(fillPlaceholders(text, values))}</div>
                     </div>
-                    {welcome.showAvatar ? <span className="sample-avatar big" aria-hidden>N</span> : null}
-                    {banner ? urlOf(banner) ? <img className="embed-img" src={urlOf(banner)!} alt="Banner" /> : null : null}
+                    {welcome.showAvatar && !(banner && spotFor(welcome, banner) !== 'none') ? <span className="sample-avatar big" aria-hidden>N</span> : null}
+                    {banner && urlOf(banner) ? (
+                      <div className="embed-img banner-shot">
+                        <img src={urlOf(banner)!} alt="Banner" />
+                        {welcome.showAvatar && spotFor(welcome, banner) !== 'none' ? <span className={`face spot-${spotFor(welcome, banner)}`} aria-hidden>N</span> : null}
+                      </div>
+                    ) : null}
                     {tagline ? <div className="embed-footer">{tagline}</div> : null}
                   </div>
                 </div>

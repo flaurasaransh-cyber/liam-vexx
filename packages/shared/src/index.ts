@@ -39,6 +39,10 @@ export const rosterSchema = z.object({
 })
 export type Roster = z.infer<typeof rosterSchema>
 
+export const AVATAR_SPOTS = ['left', 'center', 'right', 'none'] as const
+export type AvatarSpot = (typeof AVATAR_SPOTS)[number]
+export const spotFor = (welcome: { avatarSpots: Record<string, AvatarSpot> }, banner: string): AvatarSpot => welcome.avatarSpots[banner] ?? 'right'
+
 // Welcome messages for new members. Several texts and several banners can be set; each new member gets the next
 // one of each in turn (worked out from the member count, so nothing has to be stored per join).
 export const welcomeSchema = z.object({
@@ -51,6 +55,8 @@ export const welcomeSchema = z.object({
   showAvatar: z.boolean(),
   // file names of the uploaded banners, in rotation order; set by the bot when banners are uploaded
   banners: z.array(z.string().max(120)).max(8),
+  // where the new member's profile picture is drawn on each banner (by file name); a banner not listed gets 'right'
+  avatarSpots: z.record(z.string(), z.enum(AVATAR_SPOTS)).default({}),
 })
 export type Welcome = z.infer<typeof welcomeSchema>
 
@@ -66,6 +72,7 @@ export const defaultWelcome: Welcome = {
   mention: true,
   showAvatar: true,
   banners: [],
+  avatarSpots: {},
 }
 
 // Words that are swapped in when a welcome is sent.

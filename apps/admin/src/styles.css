@@ -345,3 +345,20 @@ a { color: var(--accent); }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) .mention { background: rgba(88, 101, 242, .15); color: #4752c4; }
 }
+
+/* profile picture on banners */
+.banner-shot { position: relative; overflow: hidden; }
+.embed-img.banner-shot { padding: 0; }
+.banner-shot img { display: block; width: 100%; }
+.face {
+  position: absolute; top: 50%; aspect-ratio: 1; height: 60%; transform: translate(-50%, -50%);
+  border-radius: 50%; border: 3px solid #ff5a1f; display: grid; place-items: center;
+  background: linear-gradient(135deg, #5865f2, #eb459e); color: #fff; font-weight: 700; font-size: clamp(12px, 3vw, 30px);
+  box-shadow: 0 0 0 10px rgba(0, 0, 0, .35);
+}
+.face.spot-left { left: 27%; }
+.face.spot-right { left: 73%; }
+.face.spot-center { left: 50%; top: 30%; height: 42%; }
+.spot { display: flex; gap: 2px; padding: 3px; margin: 6px 6px 0; border-radius: 9px; background: var(--surface); border: 1px solid var(--line); }
+.spot button { flex: 1; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+.spot button[aria-pressed='true'] { background: var(--accent-wash); color: var(--accent); }

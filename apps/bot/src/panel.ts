@@ -8,7 +8,8 @@ import {
   EmbedBuilder,
   type BaseMessageOptions,
 } from 'discord.js'
-import { ROSTER_BUTTON_ID, fillPlaceholders, type Panel } from '@vexx/shared'
+import { ROSTER_BUTTON_ID, fillPlaceholders, spotFor, type Panel } from '@vexx/shared'
+import { bannerWithAvatar } from './compose.js'
 import { image, rosterImage } from './store.js'
 
 const logo = readFileSync(fileURLToPath(new URL('../assets/logo.png', import.meta.url)))
@@ -69,28 +70,43 @@ export function rosterMessage(panel: Panel): BaseMessageOptions {
 }
 
 // The welcome a new member gets. Text and banner both rotate: member number N gets text N and banner N (wrapping
-// round), so consecutive joins see different ones without anything being stored per join.
-export function welcomeMessage(
+// round), so consecutive joins see different ones without anything being stored per join. The member's profile
+// picture is drawn onto the banner where that banner says it goes.
+export async function welcomeMessage(
   panel: Panel,
   member: { id: string; username: string; avatarUrl: string; server: string; count: number },
-): BaseMessageOptions {
+): Promise<BaseMessageOptions> {
   const { welcome } = panel
   const values = { user: `<@${member.id}>`, username: member.username, server: member.server, count: member.count }
   const text = welcome.messages[member.count % welcome.messages.length] ?? ''
   const embed = new EmbedBuilder().setColor(colour(welcome.color)).setDescription(fillPlaceholders(text, values))
   if (welcome.title) embed.setTitle(fillPlaceholders(welcome.title, { ...values, user: member.username }))
-  if (welcome.showAvatar) {
-    embed.setThumbnail(member.avatarUrl)
-    embed.setAuthor({ name: member.username, iconURL: member.avatarUrl })
-  }
   if (panel.about.tagline) embed.setFooter({ text: panel.about.tagline })
 
   const files: AttachmentBuilder[] = []
   const name = welcome.banners.length ? welcome.banners[member.count % welcome.banners.length] : null
   const banner = image(name)
+  const spot = name ? spotFor(welcome, name) : 'none'
+  let onBanner = false
   if (banner) {
-    embed.setImage(`attachment://${banner.name}`)
-    files.push(new AttachmentBuilder(banner.data, { name: banner.name }))
+    let data = banner.data
+    if (welcome.showAvatar && spot !== 'none') {
+      try {
+        const avatar = Buffer.from(await (await fetch(member.avatarUrl)).arrayBuffer())
+        data = await bannerWithAvatar(banner.data, avatar, spot, welcome.color)
+        onBanner = true
+      } catch (err) {
+        console.error('Could not put the profile picture on the banner:', err instanceof Error ? err.message : err)
+      }
+    }
+    const fileName = onBanner ? 'welcome.png' : banner.name
+    embed.setImage(`attachment://${fileName}`)
+    files.push(new AttachmentBuilder(data, { name: fileName }))
+  }
+  if (welcome.showAvatar) {
+    embed.setAuthor({ name: member.username, iconURL: member.avatarUrl })
+    // the corner picture only when it is not already on the banner
+    if (!onBanner) embed.setThumbnail(member.avatarUrl)
   }
   return {
     content: welcome.mention ? `<@${member.id}>` : undefined,

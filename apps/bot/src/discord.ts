@@ -84,7 +84,7 @@ client.on(Events.GuildMemberAdd, async (member) => {
   try {
     const channel = await panelChannel(welcome.channelId)
     if (channel.guildId !== member.guild.id) return
-    await channel.send(welcomeMessage(current().panel, memberDetails(member)))
+    await channel.send(await welcomeMessage(current().panel, memberDetails(member)))
   } catch (err) {
     console.error('Welcome failed:', err instanceof Error ? err.message : err)
   }
@@ -99,7 +99,7 @@ export async function sendTestWelcome(): Promise<{ url: string }> {
   const channel = await panelChannel(welcome.channelId)
   const me = channel.guild.members.me ?? (await channel.guild.members.fetchMe())
   const details = { ...memberDetails(me), count: channel.guild.memberCount + testStep++ }
-  const sent = await channel.send(welcomeMessage(current().panel, details))
+  const sent = await channel.send(await welcomeMessage(current().panel, details))
   return { url: sent.url }
 }
 
