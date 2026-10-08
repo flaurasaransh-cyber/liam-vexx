@@ -69,10 +69,14 @@ export function Preview({ panel, botName, avatar, imageUrl }: { panel: Panel; bo
                   <div className="d-buttons">
                     {about.mediaUrl ? (
                       <span className="d-btn">
+                        {about.mediaEmoji ? `${about.mediaEmoji} ` : ''}
                         {about.mediaLabel || 'VEXX Media'} <ExternalLink size={13} aria-hidden />
                       </span>
                     ) : null}
-                    <span className="d-btn">{about.rosterLabel || 'Roster'}</span>
+                    <span className="d-btn">
+                      {about.rosterEmoji ? `${about.rosterEmoji} ` : ''}
+                      {about.rosterLabel || 'Roster'}
+                    </span>
                   </div>
                 </>
               ) : (

@@ -20,8 +20,11 @@ export const aboutSchema = z.object({
   color: hex,
   showLogo: z.boolean().default(true),
   mediaLabel: z.string().trim().max(80).default(''),
+  // a single emoji shown on the button, e.g. ☑️ (optional)
+  mediaEmoji: z.string().trim().max(32).default(''),
   mediaUrl: optionalUrl.default(''),
   rosterLabel: z.string().trim().min(1).max(80),
+  rosterEmoji: z.string().trim().max(32).default(''),
 })
 export type About = z.infer<typeof aboutSchema>
 
@@ -67,8 +70,10 @@ export const defaultPanel: Panel = {
     color: '#FF5A1F',
     showLogo: true,
     mediaLabel: 'VEXX Media',
+    mediaEmoji: '☑️',
     mediaUrl: '',
     rosterLabel: 'Roster',
+    rosterEmoji: '🏆',
   },
   roster: {
     title: '🔥 VEXX Roster',

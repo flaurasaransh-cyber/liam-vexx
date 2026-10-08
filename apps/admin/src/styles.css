@@ -150,6 +150,7 @@ a { color: var(--accent); }
 .field > span { font-size: 13px; font-weight: 600; color: var(--text-2); display: flex; justify-content: space-between; gap: 8px; }
 .field > span em { font-style: normal; font-weight: 500; color: var(--muted); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.row.emoji-row { grid-template-columns: 88px minmax(0, 1fr); }
 .input, .textarea {
   width: 100%; min-width: 0;
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
@@ -277,6 +278,7 @@ a { color: var(--accent); }
   .page { padding: 20px 16px 120px; }
   .head h1 { font-size: 34px; }
   .row { grid-template-columns: minmax(0, 1fr); }
+  .row.emoji-row { grid-template-columns: 72px minmax(0, 1fr); }
   .member { grid-template-columns: 22px minmax(0, 1fr) auto; }
   .member .role { grid-column: 2 / 3; }
   .member .tools { grid-row: 1; grid-column: 3; }

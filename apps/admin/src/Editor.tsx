@@ -260,17 +260,25 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
                 <h2 className="display">Buttons</h2>
               </div>
               <div className="card-body">
-                <div className="row">
+                <div className="row emoji-row">
+                  <Field label="Emoji">
+                    <input className="input" value={about.mediaEmoji} maxLength={32} placeholder="☑️" onChange={(e) => setAbout({ mediaEmoji: e.target.value.trim() })} />
+                  </Field>
                   <Field label="Media button label">
                     <input className="input" value={about.mediaLabel} maxLength={80} onChange={(e) => setAbout({ mediaLabel: e.target.value })} />
                   </Field>
-                  <Field label="Media link" hint="leave empty to hide">
-                    <input className="input" type="url" placeholder="https://" value={about.mediaUrl} onChange={(e) => setAbout({ mediaUrl: e.target.value.trim() })} />
+                </div>
+                <Field label="Media link" hint="leave empty to hide the button">
+                  <input className="input" type="url" placeholder="https://" value={about.mediaUrl} onChange={(e) => setAbout({ mediaUrl: e.target.value.trim() })} />
+                </Field>
+                <div className="row emoji-row">
+                  <Field label="Emoji">
+                    <input className="input" value={about.rosterEmoji} maxLength={32} placeholder="🏆" onChange={(e) => setAbout({ rosterEmoji: e.target.value.trim() })} />
+                  </Field>
+                  <Field label="Roster button label">
+                    <input className="input" value={about.rosterLabel} maxLength={80} onChange={(e) => setAbout({ rosterLabel: e.target.value })} />
                   </Field>
                 </div>
-                <Field label="Roster button label">
-                  <input className="input" value={about.rosterLabel} maxLength={80} onChange={(e) => setAbout({ rosterLabel: e.target.value })} />
-                </Field>
               </div>
             </section>
 

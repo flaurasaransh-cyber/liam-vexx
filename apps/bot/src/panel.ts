@@ -31,9 +31,13 @@ export function aboutMessage(panel: Panel): BaseMessageOptions {
 
   const buttons: ButtonBuilder[] = []
   if (about.mediaUrl) {
-    buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(about.mediaLabel || 'VEXX Media').setURL(about.mediaUrl))
+    const media = new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel(about.mediaLabel || 'VEXX Media').setURL(about.mediaUrl)
+    if (about.mediaEmoji) media.setEmoji(about.mediaEmoji)
+    buttons.push(media)
   }
-  buttons.push(new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel(about.rosterLabel).setCustomId(ROSTER_BUTTON_ID))
+  const roster = new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel(about.rosterLabel).setCustomId(ROSTER_BUTTON_ID)
+  if (about.rosterEmoji) roster.setEmoji(about.rosterEmoji)
+  buttons.push(roster)
 
   return {
     embeds: [embed],
