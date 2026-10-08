@@ -5,6 +5,7 @@ import { ApiError, api } from './api'
 import { TopBar } from './TopBar'
 import { Members } from './Members'
 import { WelcomeSection } from './Welcome'
+import { ChannelPicker } from './ChannelPicker'
 import { Preview } from './Preview'
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -53,7 +54,7 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
 
   useEffect(() => {
     history.replaceState(null, '', view === 'welcome' ? '#welcome' : '#')
-    if (view !== 'welcome' || channels || channelsLoading) return
+    if (channels || channelsLoading) return
     setChannelsLoading(true)
     api
       .channels()
@@ -464,9 +465,12 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
                     </div>
                   ) : null}
                 </div>
-                <Field label="Channel ID" hint="where the panel is posted">
-                  <input className="input" inputMode="numeric" value={draft.channelId} onChange={(e) => setDraft({ ...draft, channelId: e.target.value.trim() })} />
+                <Field label="Panel channel" hint="publishing posts it here">
+                  <ChannelPicker value={draft.channelId} channels={channels} loading={channelsLoading} onChange={(channelId) => setDraft({ ...draft, channelId })} />
                 </Field>
+                {draft.channelId !== state.panel.channelId && state.messageId ? (
+                  <p className="hint-text">After you save, Publish moves the panel here and removes it from the old channel.</p>
+                ) : null}
               </div>
             </section>
           </div>

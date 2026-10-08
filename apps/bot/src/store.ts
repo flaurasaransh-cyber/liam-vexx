@@ -20,6 +20,8 @@ const CONFIG_CHANNEL_NAME = 'vexx-bot-config'
 export type Saved = {
   panel: Panel
   messageId: string | null
+  // the channel the published panel sits in (older saves did not record it: it was the panel channel)
+  messageChannelId: string | null
   publishedAt: string | null
   updatedAt: string | null
 }
@@ -27,7 +29,7 @@ export type Saved = {
 export type Image = { name: string; data: Buffer }
 export type ImageChanges = { set?: Image[]; remove?: string[] }
 
-let saved: Saved = { panel: defaultPanel, messageId: null, publishedAt: null, updatedAt: null }
+let saved: Saved = { panel: defaultPanel, messageId: null, messageChannelId: null, publishedAt: null, updatedAt: null }
 const images = new Map<string, Buffer>()
 const urls = new Map<string, string>()
 let configChannel: TextChannel | null = null
@@ -112,6 +114,7 @@ export async function load(client: Client): Promise<void> {
   saved = {
     panel: panel.success ? panel.data : defaultPanel,
     messageId: typeof raw.messageId === 'string' ? raw.messageId : null,
+    messageChannelId: typeof raw.messageChannelId === 'string' ? raw.messageChannelId : panel.success ? panel.data.channelId : null,
     publishedAt: typeof raw.publishedAt === 'string' ? raw.publishedAt : null,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
   }

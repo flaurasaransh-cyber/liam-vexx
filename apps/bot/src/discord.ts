@@ -36,28 +36,36 @@ async function panelChannel(channelId: string): Promise<TextChannel> {
 
 // Posts the panel, or edits the one already posted so the channel keeps a single panel.
 export async function publish(): Promise<{ messageId: string; url: string; edited: boolean }> {
-  const { panel, messageId } = current()
+  const { panel, messageId, messageChannelId } = current()
   const channel = await panelChannel(panel.channelId)
   const payload = aboutMessage(panel)
   if (messageId) {
-    const existing = await channel.messages.fetch(messageId).catch(() => null)
-    if (existing) {
-      const edited = await existing.edit({ ...payload, attachments: [] })
-      await save(client, { publishedAt: new Date().toISOString() })
-      return { messageId: edited.id, url: edited.url, edited: true }
+    const sameChannel = !messageChannelId || messageChannelId === panel.channelId
+    if (sameChannel) {
+      const existing = await channel.messages.fetch(messageId).catch(() => null)
+      if (existing) {
+        const edited = await existing.edit({ ...payload, attachments: [] })
+        await save(client, { messageChannelId: channel.id, publishedAt: new Date().toISOString() })
+        return { messageId: edited.id, url: edited.url, edited: true }
+      }
+    } else {
+      // the panel moved: take it down from the old channel so there is only ever one
+      const old = await client.channels.fetch(messageChannelId).catch(() => null)
+      if (old && old.isTextBased()) await old.messages.delete(messageId).catch(() => {})
     }
   }
   const sent = await channel.send(payload)
-  await save(client, { messageId: sent.id, publishedAt: new Date().toISOString() })
+  await save(client, { messageId: sent.id, messageChannelId: channel.id, publishedAt: new Date().toISOString() })
   return { messageId: sent.id, url: sent.url, edited: false }
 }
 
 export function messageUrl(): string | null {
-  const { panel, messageId } = current()
+  const { panel, messageId, messageChannelId } = current()
   if (!messageId) return null
-  const ch = client.channels.cache.get(panel.channelId)
+  const where = messageChannelId ?? panel.channelId
+  const ch = client.channels.cache.get(where)
   const guildId = ch && 'guildId' in ch ? ch.guildId : null
-  return guildId ? `https://discord.com/channels/${guildId}/${panel.channelId}/${messageId}` : null
+  return guildId ? `https://discord.com/channels/${guildId}/${where}/${messageId}` : null
 }
 
 function memberDetails(member: GuildMember) {
