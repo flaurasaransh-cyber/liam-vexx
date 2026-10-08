@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CheckCircle2, ExternalLink, ImagePlus, Loader2, LogOut, RefreshCw, Send, Trash2 } from 'lucide-react'
-import { LIMITS, panelSchema, type Panel, type PanelState } from '@vexx/shared'
+import { LIMITS, panelSchema, type ChannelOption, type Panel, type PanelState, type Welcome } from '@vexx/shared'
 import { ApiError, api } from './api'
 import { TopBar } from './TopBar'
 import { Members } from './Members'
+import { WelcomeSection } from './Welcome'
 import { Preview } from './Preview'
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -43,9 +44,24 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
   const [state, setState] = useState<PanelState | null>(null)
   const [draft, setDraft] = useState<Panel | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [busy, setBusy] = useState<null | 'save' | 'publish' | 'image' | 'load'>('load')
+  const [busy, setBusy] = useState<null | 'save' | 'publish' | 'image' | 'load' | 'banner' | 'test'>('load')
   const [notice, setNotice] = useState<{ tone: 'good' | 'bad'; text: string; link?: string } | null>(null)
   const [over, setOver] = useState(false)
+  const [view, setView] = useState<'about' | 'welcome'>(() => (location.hash === '#welcome' ? 'welcome' : 'about'))
+  const [channels, setChannels] = useState<ChannelOption[] | null>(null)
+  const [channelsLoading, setChannelsLoading] = useState(false)
+
+  useEffect(() => {
+    history.replaceState(null, '', view === 'welcome' ? '#welcome' : '#')
+    if (view !== 'welcome' || channels || channelsLoading) return
+    setChannelsLoading(true)
+    api
+      .channels()
+      .then((r) => setChannels(r.channels))
+      .catch(() => setChannels([]))
+      .finally(() => setChannelsLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view])
   const fileInput = useRef<HTMLInputElement>(null)
 
   const fail = (err: unknown) => {
@@ -90,7 +106,7 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
       const s = await api.savePanel(clean(draft))
       setState(s)
       setDraft(s.panel)
-      setNotice({ tone: 'good', text: 'Saved. Publish to update the message in Discord.' })
+      setNotice({ tone: 'good', text: view === 'welcome' ? 'Saved. New members get the new welcome straight away.' : 'Saved. Publish to update the message in Discord.' })
       return true
     } catch (err) {
       fail(err)
@@ -148,6 +164,56 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
     }
   }
 
+  // banners upload one after another; the saved order follows the order they were chosen in
+  async function uploadBanners(files: File[]) {
+    const images = files.filter((f) => ['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(f.type))
+    if (images.length === 0) return setNotice({ tone: 'bad', text: 'Use PNG, JPG, WEBP or GIF images.' })
+    setBusy('banner')
+    let added = 0
+    try {
+      for (const file of images) {
+        if (file.size > 4 * 1024 * 1024) throw new Error(`${file.name} is over 4 MB. Save it smaller.`)
+        const s = await api.uploadBanner({ name: file.name, type: file.type, data: await readFile(file) })
+        setState(s)
+        // keep unsaved edits, take only the new banner list from the server
+        setDraft((d) => (d ? { ...d, welcome: { ...d.welcome, banners: s.panel.welcome.banners } } : d))
+        added++
+      }
+      setNotice({ tone: 'good', text: added === 1 ? 'Banner added.' : `${added} banners added.` })
+    } catch (err) {
+      if (added) setNotice({ tone: 'bad', text: `${added} added, then: ${err instanceof Error ? err.message : 'an upload failed'}` })
+      else fail(err)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function removeBanner(name: string) {
+    setBusy('banner')
+    try {
+      const s = await api.removeBanner(name)
+      setState(s)
+      setDraft((d) => (d ? { ...d, welcome: { ...d.welcome, banners: s.panel.welcome.banners } } : d))
+    } catch (err) {
+      fail(err)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function testWelcome() {
+    if (dirty && !(await save())) return
+    setBusy('test')
+    try {
+      const r = await api.testWelcome()
+      setNotice({ tone: 'good', text: 'Test welcome sent.', link: r.url })
+    } catch (err) {
+      fail(err)
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const signOut = () => {
     api.logout()
     onSignOut()
@@ -189,21 +255,39 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
   const roster = draft.roster
   const setAbout = (patch: Partial<Panel['about']>) => setDraft({ ...draft, about: { ...about, ...patch } })
   const setRoster = (patch: Partial<Panel['roster']>) => setDraft({ ...draft, roster: { ...roster, ...patch } })
+  const setWelcome = (patch: Partial<Welcome>) => setDraft({ ...draft, welcome: { ...draft.welcome, ...patch } })
   const serverName = state.bot.guilds[0]?.name
 
   return (
     <>
       <TopBar>{bar}</TopBar>
       <main className="page">
-        <div className="head">
-          <div>
-            <h1 className="display">About panel</h1>
-            <p>Edit the welcome message and roster, check the preview, then publish. Publishing again updates the same message.</p>
-          </div>
-          <button className="btn primary" onClick={publish} disabled={busy !== null}>
-            {busy === 'publish' ? <Loader2 size={16} className="spin" aria-hidden /> : <Send size={16} aria-hidden />}
-            {state.messageId ? 'Publish changes' : 'Publish to Discord'}
+        <div className="views tabs" role="tablist" aria-label="Section">
+          <button role="tab" aria-selected={view === 'about'} onClick={() => setView('about')}>
+            About panel
           </button>
+          <button role="tab" aria-selected={view === 'welcome'} onClick={() => setView('welcome')}>
+            Welcome
+          </button>
+        </div>
+        <div className="head">
+          {view === 'about' ? (
+            <>
+              <div>
+                <h1 className="display">About panel</h1>
+                <p>Edit the welcome message and roster, check the preview, then publish. Publishing again updates the same message.</p>
+              </div>
+              <button className="btn primary" onClick={publish} disabled={busy !== null}>
+                {busy === 'publish' ? <Loader2 size={16} className="spin" aria-hidden /> : <Send size={16} aria-hidden />}
+                {state.messageId ? 'Publish changes' : 'Publish to Discord'}
+              </button>
+            </>
+          ) : (
+            <div>
+              <h1 className="display">Welcome</h1>
+              <p>Greets each new member in the channel you pick, with the next text and banner in turn. Changes apply as soon as you save.</p>
+            </div>
+          )}
         </div>
 
         {notice ? (
@@ -217,6 +301,20 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
           </div>
         ) : null}
 
+        {view === 'welcome' ? (
+          <WelcomeSection
+            welcome={draft.welcome}
+            setWelcome={setWelcome}
+            state={state}
+            channels={channels}
+            channelsLoading={channelsLoading}
+            busy={busy}
+            tagline={about.tagline}
+            onUpload={uploadBanners}
+            onRemoveBanner={removeBanner}
+            onTest={testWelcome}
+          />
+        ) : (
         <div className="grid">
           <div className="stack">
             <section className="card">
@@ -373,6 +471,7 @@ export function Editor({ onSignOut }: { onSignOut: () => void }) {
             </section>
           </div>
         </div>
+        )}
       </main>
 
       {dirty ? (

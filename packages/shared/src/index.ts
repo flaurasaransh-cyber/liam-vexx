@@ -39,12 +39,60 @@ export const rosterSchema = z.object({
 })
 export type Roster = z.infer<typeof rosterSchema>
 
+// Welcome messages for new members. Several texts and several banners can be set; each new member gets the next
+// one of each in turn (worked out from the member count, so nothing has to be stored per join).
+export const welcomeSchema = z.object({
+  enabled: z.boolean(),
+  channelId: z.union([z.literal(''), z.string().regex(/^\d{17,20}$/, 'Pick a welcome channel')]),
+  title: z.string().trim().max(256),
+  messages: z.array(z.string().trim().min(1, 'A welcome text cannot be empty').max(1500)).min(1, 'Add at least one welcome text').max(10),
+  color: hex,
+  mention: z.boolean(),
+  showAvatar: z.boolean(),
+  // file names of the uploaded banners, in rotation order; set by the bot when banners are uploaded
+  banners: z.array(z.string().max(120)).max(8),
+})
+export type Welcome = z.infer<typeof welcomeSchema>
+
+export const defaultWelcome: Welcome = {
+  enabled: false,
+  channelId: '',
+  title: 'Welcome to VEXX',
+  messages: [
+    'Hey {user}, welcome to **{server}**! You are member **#{count}**. Defy The Expected. 🔥',
+    '{user} just landed in **{server}**. Make yourself at home, you are member **#{count}**. 🧡',
+  ],
+  color: '#FF5A1F',
+  mention: true,
+  showAvatar: true,
+  banners: [],
+}
+
+// Words that are swapped in when a welcome is sent.
+export const PLACEHOLDERS = [
+  { key: '{user}', means: 'mentions the new member' },
+  { key: '{username}', means: 'their name, without a ping' },
+  { key: '{server}', means: 'the server name' },
+  { key: '{count}', means: 'how many members the server has now' },
+] as const
+
+export function fillPlaceholders(text: string, values: { user: string; username: string; server: string; count: number }) {
+  return text
+    .replaceAll('{user}', values.user)
+    .replaceAll('{username}', values.username)
+    .replaceAll('{server}', values.server)
+    .replaceAll('{count}', String(values.count))
+}
+
 export const panelSchema = z.object({
   channelId: z.string().regex(/^\d{17,20}$/, 'A Discord channel ID is 17 to 20 digits'),
   about: aboutSchema,
   roster: rosterSchema,
+  welcome: welcomeSchema.default(defaultWelcome),
 })
 export type Panel = z.infer<typeof panelSchema>
+
+export type ChannelOption = { id: string; name: string; category: string | null }
 
 // What the bot reports back alongside the panel.
 export type PanelState = {
@@ -55,6 +103,7 @@ export type PanelState = {
   publishedAt: string | null
   updatedAt: string | null
   rosterImageUrl: string | null
+  banners: { name: string; url: string | null }[]
   bot: { name: string; avatarUrl: string | null; online: boolean; guilds: { id: string; name: string }[] }
 }
 
@@ -83,6 +132,7 @@ export const defaultPanel: Panel = {
     staff: [],
     imageName: null,
   },
+  welcome: defaultWelcome,
 }
 
 export const ROSTER_BUTTON_ID = 'vexx:roster'

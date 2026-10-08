@@ -1,10 +1,11 @@
-import { ChannelType, Client, Events, GatewayIntentBits, MessageFlags, type TextChannel } from 'discord.js'
-import { ROSTER_BUTTON_ID } from '@vexx/shared'
-import { aboutMessage, rosterMessage } from './panel.js'
-import { current, load, save } from './store.js'
+import { ChannelType, Client, Events, GatewayIntentBits, MessageFlags, type GuildMember, type TextChannel } from 'discord.js'
+import { ROSTER_BUTTON_ID, type ChannelOption } from '@vexx/shared'
+import { aboutMessage, rosterMessage, welcomeMessage } from './panel.js'
+import { current, load, save, serverOf } from './store.js'
 
-// Only the Guilds intent: the bot reads no chat messages, so it needs no privileged intents.
-export const client = new Client({ intents: [GatewayIntentBits.Guilds] })
+// Guilds for channels and buttons; GuildMembers (switched on in the developer portal) to see people join.
+// The bot reads no chat messages, so it does not need the message content intent.
+export const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] })
 
 client.once(Events.ClientReady, async (c) => {
   console.log(`Signed in to Discord as ${c.user.tag}, in ${c.guilds.cache.size} server(s).`)
@@ -57,4 +58,52 @@ export function messageUrl(): string | null {
   const ch = client.channels.cache.get(panel.channelId)
   const guildId = ch && 'guildId' in ch ? ch.guildId : null
   return guildId ? `https://discord.com/channels/${guildId}/${panel.channelId}/${messageId}` : null
+}
+
+function memberDetails(member: GuildMember) {
+  return {
+    id: member.id,
+    username: member.displayName,
+    avatarUrl: member.displayAvatarURL({ size: 256, extension: 'png' }),
+    server: member.guild.name,
+    count: member.guild.memberCount,
+  }
+}
+
+client.on(Events.GuildMemberAdd, async (member) => {
+  const { welcome } = current().panel
+  if (!welcome.enabled || !welcome.channelId || member.user.bot) return
+  try {
+    const channel = await panelChannel(welcome.channelId)
+    if (channel.guildId !== member.guild.id) return
+    await channel.send(welcomeMessage(current().panel, memberDetails(member)))
+  } catch (err) {
+    console.error('Welcome failed:', err instanceof Error ? err.message : err)
+  }
+})
+
+// Sends a sample welcome to the chosen channel, with the bot standing in for the new member. Each test moves the
+// rotation on by one, so pressing it again shows the next text and banner.
+let testStep = 0
+export async function sendTestWelcome(): Promise<{ url: string }> {
+  const { welcome } = current().panel
+  if (!welcome.channelId) throw new Error('Pick a welcome channel first.')
+  const channel = await panelChannel(welcome.channelId)
+  const me = channel.guild.members.me ?? (await channel.guild.members.fetchMe())
+  const details = { ...memberDetails(me), count: channel.guild.memberCount + testStep++ }
+  const sent = await channel.send(welcomeMessage(current().panel, details))
+  return { url: sent.url }
+}
+
+// Text channels in the server, for the welcome channel picker.
+export async function textChannels(): Promise<ChannelOption[]> {
+  const guild = await serverOf(client)
+  const channels = await guild.channels.fetch()
+  const me = guild.members.me ?? (await guild.members.fetchMe())
+  return [...channels.values()]
+    .filter((c): c is TextChannel => Boolean(c) && (c!.type === ChannelType.GuildText || c!.type === ChannelType.GuildAnnouncement))
+    .filter((c) => c.permissionsFor(me)?.has(['ViewChannel', 'SendMessages']))
+    .filter((c) => c.name !== 'vexx-bot-config')
+    .sort((a, b) => (a.parent?.rawPosition ?? -1) - (b.parent?.rawPosition ?? -1) || a.rawPosition - b.rawPosition)
+    .map((c) => ({ id: c.id, name: c.name, category: c.parent?.name ?? null }))
 }

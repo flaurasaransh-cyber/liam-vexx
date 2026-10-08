@@ -10,9 +10,9 @@ import {
 import { defaultPanel, panelSchema, type Panel } from '@vexx/shared'
 import { env } from './env.js'
 
-// The bot keeps its settings in Discord: one message in a private channel, carrying config.json and the
-// roster image as attachments. Saving posts a fresh message and removes the old one, so the newest message is
-// always the truth. No database, nothing else to host.
+// The bot keeps its settings in Discord: one message in a private channel, carrying config.json and every image
+// (roster picture, welcome banners) as attachments. Saving posts a fresh message and removes the old one, so the
+// newest message is always the truth. No database, nothing else to host.
 
 const CONFIG_FILE = 'vexx-config.json'
 const CONFIG_CHANNEL_NAME = 'vexx-bot-config'
@@ -24,20 +24,29 @@ export type Saved = {
   updatedAt: string | null
 }
 
-type Image = { name: string; data: Buffer }
+export type Image = { name: string; data: Buffer }
+export type ImageChanges = { set?: Image[]; remove?: string[] }
 
 let saved: Saved = { panel: defaultPanel, messageId: null, publishedAt: null, updatedAt: null }
-let image: Image | null = null
-let imageUrl: string | null = null
+const images = new Map<string, Buffer>()
+const urls = new Map<string, string>()
 let configChannel: TextChannel | null = null
 let loaded = false
 // saves run one at a time, so two quick edits cannot leave two config messages behind
 let queue: Promise<unknown> = Promise.resolve()
 
 export const current = () => saved
-export const rosterImage = () => image
-export const rosterImageUrl = () => imageUrl
 export const isLoaded = () => loaded
+export const imageUrl = (name: string | null) => (name ? (urls.get(name) ?? null) : null)
+export const image = (name: string | null): Image | null => {
+  const data = name ? images.get(name) : undefined
+  return name && data ? { name, data } : null
+}
+export const rosterImage = () => image(saved.panel.roster.imageName)
+export const rosterImageUrl = () => imageUrl(saved.panel.roster.imageName)
+
+// the images the saved settings point at; anything else is dropped on the next save
+const referenced = (panel: Panel) => new Set([panel.roster.imageName, ...panel.welcome.banners].filter((n): n is string => Boolean(n)))
 
 async function panelGuild(client: Client, channelId: string): Promise<Guild> {
   const channel = await client.channels.fetch(channelId).catch(() => null)
@@ -45,6 +54,10 @@ async function panelGuild(client: Client, channelId: string): Promise<Guild> {
     throw new Error(`The bot cannot see channel ${channelId}. Invite the bot to that server first.`)
   }
   return channel.guild
+}
+
+export async function serverOf(client: Client): Promise<Guild> {
+  return panelGuild(client, saved.panel.channelId)
 }
 
 async function findConfigChannel(client: Client, channelId: string): Promise<TextChannel> {
@@ -84,7 +97,7 @@ function latestConfigMessage(messages: Iterable<Message>, botId: string): Messag
   return best
 }
 
-// Reads the newest saved config (and roster image) from Discord. Safe to call again; it refreshes the cache.
+// Reads the newest saved config and its images from Discord. Safe to call again; it refreshes the cache.
 export async function load(client: Client): Promise<void> {
   const channel = await findConfigChannel(client, saved.panel.channelId)
   const messages = await channel.messages.fetch({ limit: 50 })
@@ -102,31 +115,40 @@ export async function load(client: Client): Promise<void> {
     publishedAt: typeof raw.publishedAt === 'string' ? raw.publishedAt : null,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null,
   }
-  const pic = saved.panel.roster.imageName ? message.attachments.find((a) => a.name === saved.panel.roster.imageName) : undefined
-  if (pic) {
-    image = { name: pic.name, data: Buffer.from(await (await fetch(pic.url)).arrayBuffer()) }
-    imageUrl = pic.url
-  } else {
-    image = null
-    imageUrl = null
+  images.clear()
+  urls.clear()
+  const wanted = referenced(saved.panel)
+  for (const a of message.attachments.values()) {
+    if (!wanted.has(a.name)) continue
+    images.set(a.name, Buffer.from(await (await fetch(a.url)).arrayBuffer()))
+    urls.set(a.name, a.url)
+  }
+  // a referenced image that is missing from the message is forgotten, so nothing points at a file that is gone
+  saved.panel = {
+    ...saved.panel,
+    roster: { ...saved.panel.roster, imageName: saved.panel.roster.imageName && images.has(saved.panel.roster.imageName) ? saved.panel.roster.imageName : null },
+    welcome: { ...saved.panel.welcome, banners: saved.panel.welcome.banners.filter((n) => images.has(n)) },
   }
   loaded = true
 }
 
-// Writes the config (and the current roster image) as a new message, then removes older config messages.
-export function save(client: Client, next: Partial<Saved>, nextImage?: Image | null): Promise<Saved> {
+// Writes the config and its images as a new message, then removes older config messages.
+export function save(client: Client, next: Partial<Saved>, changes: ImageChanges = {}): Promise<Saved> {
   const run = queue.then(async () => {
+    for (const name of changes.remove ?? []) images.delete(name)
+    for (const img of changes.set ?? []) images.set(img.name, img.data)
     const merged: Saved = { ...saved, ...next, updatedAt: new Date().toISOString() }
-    if (nextImage !== undefined) {
-      image = nextImage
-      merged.panel = { ...merged.panel, roster: { ...merged.panel.roster, imageName: nextImage?.name ?? null } }
-    }
+    const keep = referenced(merged.panel)
+    for (const name of [...images.keys()]) if (!keep.has(name)) images.delete(name)
+
     const channel = await findConfigChannel(client, merged.panel.channelId)
     const files = [new AttachmentBuilder(Buffer.from(JSON.stringify(merged, null, 2)), { name: CONFIG_FILE })]
-    if (image && merged.panel.roster.imageName) files.push(new AttachmentBuilder(image.data, { name: image.name }))
+    for (const [name, data] of images) files.push(new AttachmentBuilder(data, { name }))
     const posted = await channel.send({ content: `Saved ${merged.updatedAt}. The newest message here is the one the bot uses.`, files })
     saved = merged
-    imageUrl = image ? (posted.attachments.find((a) => a.name === image!.name)?.url ?? null) : null
+    urls.clear()
+    for (const a of posted.attachments.values()) if (a.name !== CONFIG_FILE) urls.set(a.name, a.url)
+
     // tidy up: older config messages are no longer needed
     const old = await channel.messages.fetch({ limit: 50 })
     for (const m of old.values()) {

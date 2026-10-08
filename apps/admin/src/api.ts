@@ -1,4 +1,4 @@
-import type { Panel, PanelState } from '@vexx/shared'
+import type { ChannelOption, Panel, PanelState } from '@vexx/shared'
 
 const BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
 const KEY = 'vexx-session'
@@ -59,5 +59,10 @@ export const api = {
   uploadImage: (file: { name: string; type: string; data: string }) =>
     call<PanelState>('/api/roster-image', { method: 'POST', body: JSON.stringify(file) }),
   removeImage: () => call<PanelState>('/api/roster-image', { method: 'DELETE' }),
+  channels: () => call<{ channels: ChannelOption[] }>('/api/channels'),
+  uploadBanner: (file: { name: string; type: string; data: string }) =>
+    call<PanelState>('/api/welcome/banners', { method: 'POST', body: JSON.stringify(file) }),
+  removeBanner: (name: string) => call<PanelState>(`/api/welcome/banners/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  testWelcome: () => call<{ url: string }>('/api/welcome/test', { method: 'POST' }),
   publish: () => call<PanelState & { result: { url: string; edited: boolean } }>('/api/publish', { method: 'POST' }),
 }

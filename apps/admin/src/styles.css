@@ -289,3 +289,57 @@ a { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* section tabs */
+.views { margin-bottom: 18px; }
+.muted { color: var(--muted); }
+.hint-text { color: var(--muted); font-size: 13px; margin: 0; }
+
+/* channel picker */
+.picker { position: relative; }
+.picker-button { display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; }
+.picker-button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-pop {
+  position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px;
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .55); overflow: hidden;
+  animation: pop .14s cubic-bezier(.2, 0, 0, 1);
+}
+@keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
+.picker-search { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.picker-search input { flex: 1; border: 0; outline: none; background: transparent; min-width: 0; }
+.picker-list { list-style: none; margin: 0; padding: 6px; max-height: 280px; overflow: auto; }
+.picker-list li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.picker-list li.active { background: var(--surface-2); }
+.picker-list li[aria-selected='true'] { color: var(--accent); }
+.picker-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-cat { color: var(--muted); font-size: 12px; white-space: nowrap; max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
+.picker-check { color: var(--accent); flex: none; }
+.picker-empty { color: var(--muted); cursor: default !important; }
+
+/* welcome texts */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+.chip code { color: var(--accent); font-weight: 600; font-family: ui-monospace, Consolas, monospace; }
+.text-variant { display: grid; gap: 6px; }
+.text-variant-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.textarea.short { min-height: 92px; }
+
+/* banners */
+.banners { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.banner { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface-2); }
+.banner img, .banner-missing { display: block; width: 100%; aspect-ratio: 16 / 7; object-fit: cover; background: #000; }
+.banner-missing { display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+.banner-bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 4px 12px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.banner-bar .tools { display: flex; }
+
+/* welcome preview */
+.stepper { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mention { display: inline-block; margin-top: 2px; padding: 0 3px; border-radius: 3px; background: rgba(88, 101, 242, .3); color: #c9cdfb; font-weight: 500; font-size: 14px; }
+:root[data-theme='light'] .mention { background: rgba(88, 101, 242, .15); color: #4752c4; }
+.embed-author { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.sample-avatar { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #5865f2, #eb459e); color: #fff; font-size: 12px; font-weight: 700; flex: none; }
+.sample-avatar.big { width: 72px; height: 72px; font-size: 28px; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .mention { background: rgba(88, 101, 242, .15); color: #4752c4; }
+}

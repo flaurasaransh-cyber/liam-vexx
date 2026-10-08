@@ -8,8 +8,8 @@ import {
   EmbedBuilder,
   type BaseMessageOptions,
 } from 'discord.js'
-import { ROSTER_BUTTON_ID, type Panel } from '@vexx/shared'
-import { rosterImage } from './store.js'
+import { ROSTER_BUTTON_ID, fillPlaceholders, type Panel } from '@vexx/shared'
+import { image, rosterImage } from './store.js'
 
 const logo = readFileSync(fileURLToPath(new URL('../assets/logo.png', import.meta.url)))
 const LOGO_NAME = 'vexx-logo.png'
@@ -73,4 +73,36 @@ export function rosterMessage(panel: Panel): BaseMessageOptions {
     files.push(new AttachmentBuilder(pic.data, { name: pic.name }))
   }
   return { embeds: [embed], files }
+}
+
+// The welcome a new member gets. Text and banner both rotate: member number N gets text N and banner N (wrapping
+// round), so consecutive joins see different ones without anything being stored per join.
+export function welcomeMessage(
+  panel: Panel,
+  member: { id: string; username: string; avatarUrl: string; server: string; count: number },
+): BaseMessageOptions {
+  const { welcome } = panel
+  const values = { user: `<@${member.id}>`, username: member.username, server: member.server, count: member.count }
+  const text = welcome.messages[member.count % welcome.messages.length] ?? ''
+  const embed = new EmbedBuilder().setColor(colour(welcome.color)).setDescription(fillPlaceholders(text, values))
+  if (welcome.title) embed.setTitle(fillPlaceholders(welcome.title, { ...values, user: member.username }))
+  if (welcome.showAvatar) {
+    embed.setThumbnail(member.avatarUrl)
+    embed.setAuthor({ name: member.username, iconURL: member.avatarUrl })
+  }
+  if (panel.about.tagline) embed.setFooter({ text: panel.about.tagline })
+
+  const files: AttachmentBuilder[] = []
+  const name = welcome.banners.length ? welcome.banners[member.count % welcome.banners.length] : null
+  const banner = image(name)
+  if (banner) {
+    embed.setImage(`attachment://${banner.name}`)
+    files.push(new AttachmentBuilder(banner.data, { name: banner.name }))
+  }
+  return {
+    content: welcome.mention ? `<@${member.id}>` : undefined,
+    embeds: [embed],
+    files,
+    allowedMentions: { users: welcome.mention ? [member.id] : [] },
+  }
 }
