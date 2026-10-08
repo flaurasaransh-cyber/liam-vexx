@@ -51,22 +51,15 @@ function list(members: Panel['roster']['team']) {
   return members.map((m) => `🔸 **${m.name}**${m.role ? ` — ${m.role}` : ''}`).join('\n')
 }
 
-// What someone sees after pressing Roster: only to them, so the channel stays clean.
+// What someone sees after pressing Roster: only to them, so the channel stays clean. Laid out as one description
+// with large headings and a blank line between sections (fields render cramped on phones), and no corner logo, so
+// the names get the full width.
 export function rosterMessage(panel: Panel): BaseMessageOptions {
   const { roster, about } = panel
-  const embed = new EmbedBuilder()
-    .setColor(colour(about.color))
-    .setTitle(roster.title)
-    .addFields(
-      { name: roster.teamHeading, value: list(roster.team) },
-      { name: roster.staffHeading, value: list(roster.staff) },
-    )
+  const description = [`### ${roster.teamHeading}`, list(roster.team), '', `### ${roster.staffHeading}`, list(roster.staff)].join('\n')
+  const embed = new EmbedBuilder().setColor(colour(about.color)).setTitle(roster.title).setDescription(description)
   if (about.tagline) embed.setFooter({ text: about.tagline })
   const files: AttachmentBuilder[] = []
-  if (about.showLogo) {
-    embed.setThumbnail(`attachment://${LOGO_NAME}`)
-    files.push(new AttachmentBuilder(logo, { name: LOGO_NAME }))
-  }
   const pic = rosterImage()
   if (pic) {
     embed.setImage(`attachment://${pic.name}`)

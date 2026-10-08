@@ -84,12 +84,11 @@ export function Preview({ panel, botName, avatar, imageUrl }: { panel: Panel; bo
                   <div className="embed" style={style}>
                     <div style={{ minWidth: 0 }}>
                       <div className="embed-title">{roster.title}</div>
-                      <div className="embed-field-name">{roster.teamHeading}</div>
+                      <div className="embed-h3">{roster.teamHeading}</div>
                       <List members={roster.team} />
-                      <div className="embed-field-name">{roster.staffHeading}</div>
+                      <div className="embed-h3 spaced">{roster.staffHeading}</div>
                       <List members={roster.staff} />
                     </div>
-                    {about.showLogo ? <img className="embed-thumb" src="/logo.png" alt="" /> : null}
                     {imageUrl ? <img className="embed-img" src={imageUrl} alt="Roster" /> : null}
                     {about.tagline ? <div className="embed-footer">{about.tagline}</div> : null}
                   </div>
