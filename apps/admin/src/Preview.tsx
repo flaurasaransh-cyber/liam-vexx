@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import type { Member, Panel } from '@vexx/shared'
 
+// Discord draws **bold** and similar marks in titles as styling, so the preview drops the marks too
+const plain = (text: string) => text.replace(/(**|__|*|_|~~)(.+?)/g, '$2')
+
 function List({ members }: { members: Member[] }) {
   const named = members.filter((m) => m.name.trim())
   if (named.length === 0)
@@ -53,7 +56,7 @@ export function Preview({ panel, botName, avatar, imageUrl }: { panel: Panel; bo
                 <>
                   <div className="embed" style={style}>
                     <div style={{ minWidth: 0 }}>
-                      <div className="embed-title">{about.title || 'Title'}</div>
+                      <div className="embed-title">{plain(about.title) || 'Title'}</div>
                       <div className="embed-body">
                         {about.body}
                         {about.tagline ? (
@@ -83,7 +86,7 @@ export function Preview({ panel, botName, avatar, imageUrl }: { panel: Panel; bo
                 <>
                   <div className="embed" style={style}>
                     <div style={{ minWidth: 0 }}>
-                      <div className="embed-title">{roster.title}</div>
+                      <div className="embed-title">{plain(roster.title)}</div>
                       <div className="embed-h3">{roster.teamHeading}</div>
                       <List members={roster.team} />
                       <div className="embed-h3 spaced">{roster.staffHeading}</div>
