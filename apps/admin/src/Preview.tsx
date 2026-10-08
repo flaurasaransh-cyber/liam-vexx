@@ -3,7 +3,7 @@ import { ExternalLink } from 'lucide-react'
 import type { Member, Panel } from '@vexx/shared'
 
 // Discord draws **bold** and similar marks in titles as styling, so the preview drops the marks too
-const plain = (text: string) => text.replace(/(**|__|*|_|~~)(.+?)/g, '$2')
+const plain = (text: string) => text.replace(/(\*\*|__|\*|_|~~)(.+?)\1/g, '$2')
 
 function List({ members }: { members: Member[] }) {
   const named = members.filter((m) => m.name.trim())
